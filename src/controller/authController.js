@@ -64,18 +64,16 @@ const Login = async (req, res) => {
         // Verify the password
         const isPasswordValid = await bcrypt.compare(password, existingUser.password);
         if (!isPasswordValid) {
-            // return sendResponse(res, 400, null, "User Password is Wrong");
             return sendResponse(res, 400, null, PASSWORD_IS_WRONG, true);
         }
 
         // Generate a token
         const token = createSecretToken(existingUser._id);
 
-        // Set the token in an HTTP-only cookie
         res.cookie("authToken", token, {
-            httpOnly: true, // Prevent access from JavaScript
-            secure: true, // Only send over HTTPS (set false for development)
-            sameSite: "strict", // Mitigates CSRF attacks
+            httpOnly: true,
+            secure: true,
+            sameSite: "strict",
         });
 
         // Send a success response

@@ -5,10 +5,10 @@ const cors = require("cors");
 require("dotenv").config()
 const bodyParser = require("body-parser");
 const authRouter = require("./routes/authRoute");
-const User = require("./models/user");
 const verifyToken = require("./middleware/verifyToken");
 const PORT = process.env.PORT || 8000
 const cookieParser = require("cookie-parser");
+const dashboardRouter = require("./routes/dashboardRoute");
 
 // -----------------------------------------------
 
@@ -31,17 +31,9 @@ DBConnection().catch(() => {
 })
 
 // Routes 
-app.use("/api/auth", authRouter);
+app.use("/auth", authRouter);
+app.use("/dashboard", verifyToken, dashboardRouter);
 
-// Protected route for the dashboard
-app.get("/dashboard", verifyToken, async (req, res) => {
-    try {
-        const users = await User.find();
-        res.status(200).json({ message: "Access Granted", users });
-    } catch (error) {
-        res.status(500).json({ message: "Internal Server Error", error });
-    }
-});
 
 // PORT Initialization 
 app.listen(PORT, () => {
