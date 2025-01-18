@@ -10,17 +10,14 @@ const {
     USER_NOT_FOUND_WITH_THIS_EMAIL,
     PASSWORD_IS_WRONG,
     LOGIN_SUCCESSFUL,
-    LOGOUT_SUCCESSFUL
+    LOGOUT_SUCCESSFUL,
+    GENERATE_OTP
 } = require("../helpers/constant");
 const sendOTPEmail = require("../utils/sendingEmail");
-const crypto = require("crypto");
-const OTP = require("../models/otp")
+const OTP = require("../models/otp");
+const generateOTP = require("../utils/generateOTP");
 
-const generateOTP = () => {
-    return crypto.randomBytes(3).toString("hex");  // 6-digit OTP
-};
-
-
+// ---------------------------------------------------
 // Signup - POST - "/signup"
 const Signup = async (req, res) => {
     try {
@@ -37,8 +34,18 @@ const Signup = async (req, res) => {
 
         const user = await User.create({ email, password, userName, confirmPassword });
 
-        const otp = generateOTP();
-        const expiresAt = new Date(Date.now() + 60 * 1000); // OTP expires in 60 seconds
+          // Generate a token
+          const token = createSecretToken(existingUser._id);
+
+          res.cookie("authToken", token, {
+              httpOnly: true,
+              secure: true,
+              sameSite: "strict",
+          });
+
+        const otp = generateOTP(GENERATE_OTP);
+        // OTP expires in 60 seconds
+        const expiresAt = new Date(Date.now() + 60 * 1000);
 
         // Store OTP in the database
         await OTP.create({ email, otp, expiresAt });
@@ -48,9 +55,12 @@ const Signup = async (req, res) => {
 
         sendResponse(res, 201, user, USER_SIGNUP_SUCCESSFULLY, false);
     } catch (error) {
+        console.error("Error in Signup:", error);
         sendResponse(res, 500, null, INTERNAL_SERVER_ERROR, true);
     }
 };
+
+// ---------------------------------------------------
 // Login - POST - "/login"
 const Login = async (req, res) => {
     try {
@@ -78,6 +88,16 @@ const Login = async (req, res) => {
             sameSite: "strict",
         });
 
+        const otp = generateOTP(GENERATE_OTP);
+        // OTP expires in 60 seconds
+        const expiresAt = new Date(Date.now() + 60 * 1000);
+
+        // Store OTP in the database
+        await OTP.create({ email, otp, expiresAt });
+
+        // Send OTP email
+        await sendOTPEmail(email, otp);
+
         // Send a success response
         sendResponse(res, 200, existingUser, LOGIN_SUCCESSFUL, false);
     } catch (error) {
@@ -85,12 +105,16 @@ const Login = async (req, res) => {
     }
 };
 
+// ---------------------------------------------------
 // Logout - POST - "/logout"
 const Logout = (req, res) => {
     res.clearCookie('authToken');
     return sendResponse(res, 200, null, LOGOUT_SUCCESSFUL, false);
 };
 
+
+// ---------------------------------------------------
+// Verify OTP - POST - "/verify-top" 
 const verifyOTP = async (req, res) => {
     const { email, otp } = req.body;
 
@@ -109,15 +133,18 @@ const verifyOTP = async (req, res) => {
     sendResponse(res, 200, null, "OTP Verified", false);
 };
 
+
+// ---------------------------------------------------
+// Resending OTP - POST - "/resend-top" 
 const resendOTP = async (req, res) => {
     const { email } = req.body;
 
-    const existingOtp = await OTP.findOne({ email });
+    const existingOtp = await OTP.find({ email });
     if (existingOtp) {
         await OTP.deleteOne({ email });  // Remove old OTP
     }
 
-    const otp = generateOTP();
+    const otp = generateOTP(GENERATE_OTP);
     const expiresAt = new Date(Date.now() + 60 * 1000);  // 60 seconds expiration
 
     await OTP.create({ email, otp, expiresAt });
@@ -127,7 +154,7 @@ const resendOTP = async (req, res) => {
     sendResponse(res, 200, null, "New OTP Sent", false);
 };
 
-
+ 
 module.exports = {
     Signup,
     Login,

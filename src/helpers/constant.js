@@ -1,3 +1,4 @@
+module.exports.GENERATE_OTP = 6
 module.exports.USER_EXIST = "User is Already Exist"
 module.exports.PASSWORD_DOESNT_MATCH = "Password Doesn't Match"
 module.exports.USER_SIGNUP_SUCCESSFULLY = "User Signed Up Successfully"
