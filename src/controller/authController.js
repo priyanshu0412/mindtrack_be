@@ -34,14 +34,14 @@ const Signup = async (req, res) => {
 
         const user = await User.create({ email, password, userName, confirmPassword });
 
-          // Generate a token
-          const token = createSecretToken(existingUser._id);
+        // Generate a token
+        const token = createSecretToken(user._id, user?.email);
 
-          res.cookie("authToken", token, {
-              httpOnly: true,
-              secure: true,
-              sameSite: "strict",
-          });
+        res.cookie("authToken", token, {
+            httpOnly: false,
+            secure: false,
+            sameSite: "strict",
+        });
 
         const otp = generateOTP(GENERATE_OTP);
         // OTP expires in 60 seconds
@@ -118,6 +118,11 @@ const Logout = (req, res) => {
 const verifyOTP = async (req, res) => {
     const { email, otp } = req.body;
 
+    // Ensure user is authenticated by checking the decoded token
+    if (!req.user || req.user.email !== email) {
+        return sendResponse(res, 403, null, "Unauthorized", true);
+    }
+
     // Check if OTP exists and has not expired
     const otpRecord = await OTP.findOne({ email, otp });
 
@@ -132,6 +137,7 @@ const verifyOTP = async (req, res) => {
     // OTP is valid, proceed with user login or signup
     sendResponse(res, 200, null, "OTP Verified", false);
 };
+
 
 
 // ---------------------------------------------------
@@ -154,7 +160,7 @@ const resendOTP = async (req, res) => {
     sendResponse(res, 200, null, "New OTP Sent", false);
 };
 
- 
+
 module.exports = {
     Signup,
     Login,
