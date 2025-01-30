@@ -40,7 +40,8 @@ const Signup = async (req, res) => {
         res.cookie("authToken", token, {
             httpOnly: false,
             secure: false,
-            sameSite: "strict",
+            sameSite: "Lax",
+            expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         });
 
         const otp = generateOTP(GENERATE_OTP);
@@ -52,6 +53,8 @@ const Signup = async (req, res) => {
 
         // Send OTP email
         await sendOTPEmail(email, otp);
+
+        user.password = undefined
 
         sendResponse(res, 201, user, USER_SIGNUP_SUCCESSFULLY, false);
     } catch (error) {
@@ -83,9 +86,10 @@ const Login = async (req, res) => {
         const token = createSecretToken(existingUser._id);
 
         res.cookie("authToken", token, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "strict",
+            httpOnly: false,
+            secure: false,
+            sameSite: "Lax",
+            expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         });
 
         const otp = generateOTP(GENERATE_OTP);
@@ -134,8 +138,24 @@ const verifyOTP = async (req, res) => {
         return sendResponse(res, 400, null, "OTP Expired", true);
     }
 
-    // OTP is valid, proceed with user login or signup
-    sendResponse(res, 200, null, "OTP Verified", false);
+    // OTP is valid, proceed with user verification
+    try {
+        // Find the user by email and update the isVerified field
+        const user = await User.findOneAndUpdate(
+            { email },
+            { isVerified: true },
+            { new: true } // This ensures the updated document is returned
+        );
+
+        if (!user) {
+            return sendResponse(res, 404, null, "User not found", true);
+        }
+
+        sendResponse(res, 200, null, "OTP Verified and User Verified", false);
+    } catch (error) {
+        console.error(error);
+        sendResponse(res, 500, null, "Internal Server Error", true);
+    }
 };
 
 
@@ -160,11 +180,66 @@ const resendOTP = async (req, res) => {
     sendResponse(res, 200, null, "New OTP Sent", false);
 };
 
+// Forgot Password
+const ForgotPassword = async (req, res) => {
+    const { email } = req.body;
+
+    // Check if the user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+        return sendResponse(res, 400, null, "User not found with this email", true);
+    }
+
+    // Generate a password reset token (JWT) that expires in 1 hour
+    const resetToken = jwt.sign({ id: user._id, email: email }, process.env.JWT_SECRET, {
+        expiresIn: "1h",  // Set 1 hour expiration
+    });
+
+    // Generate the reset password link
+    const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
+
+    // Send the reset password link email
+    const resetMessage = `Click here to reset your password: ${resetLink}`;
+    await sendEmailResetPass(email, resetMessage);  // Reuse sendOTPEmail to send the reset link
+
+    sendResponse(res, 200, null, "Password reset link sent to email", false);
+};
+
+
+// Reset Password
+const ResetPassword = async (req, res) => {
+    const { token, newPassword } = req.body;
+
+    try {
+        // Decode and verify the token (check if it’s expired)
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        console.log("decoded", decoded)
+
+        // Find the user by the decoded ID (ensure the token is valid)
+        const user = await User.findOne({ _id: decoded.id });
+        if (!user) {
+            return sendResponse(res, 400, null, "User not found", true);
+        }
+
+        // Update the user's password
+        user.password = await bcrypt.hash(newPassword, 10);
+        user.confirmPassword = await bcrypt.hash(newPassword, 10);
+        await user.save();
+
+        sendResponse(res, 200, null, "Password successfully updated", false);
+
+    } catch (error) {
+        sendResponse(res, 400, null, "In Valid Or Expire Token", true);
+    }
+};
 
 module.exports = {
     Signup,
     Login,
     Logout,
     verifyOTP,
-    resendOTP
+    resendOTP,
+    ForgotPassword,
+    ResetPassword
 };
