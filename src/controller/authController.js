@@ -11,13 +11,22 @@ const {
     PASSWORD_IS_WRONG,
     LOGIN_SUCCESSFUL,
     LOGOUT_SUCCESSFUL,
-    GENERATE_OTP
+    GENERATE_OTP,
+    UNAUTHORIZED_USER,
+    INVALID_OTP,
+    OTP_EXPIRE,
+    OTP_AND_USER_VERIFIED,
+    NEW_OTP_SENT,
+    RESET_PASSWORD_LINK_SENT,
+    PASSWORD_UPDATED_SUCCESSFULLY,
+    INVALID_OR_EXPIRE_TOKEN
 } = require("../helpers/constant");
 const sendOTPEmail = require("../utils/sendingEmail");
 const OTP = require("../models/otp");
 const generateOTP = require("../utils/generateOTP");
+const jwt = require("jsonwebtoken");
+const sendEmailResetPass = require("../utils/sendResetPassword");
 
-// ---------------------------------------------------
 // Signup - POST - "/signup"
 const Signup = async (req, res) => {
     try {
@@ -34,7 +43,6 @@ const Signup = async (req, res) => {
 
         const user = await User.create({ email, password, userName, confirmPassword });
 
-        // Generate a token
         const token = createSecretToken(user._id, user?.email);
 
         res.cookie("authToken", token, {
@@ -45,13 +53,11 @@ const Signup = async (req, res) => {
         });
 
         const otp = generateOTP(GENERATE_OTP);
-        // OTP expires in 60 seconds
+
         const expiresAt = new Date(Date.now() + 60 * 1000);
 
-        // Store OTP in the database
         await OTP.create({ email, otp, expiresAt });
 
-        // Send OTP email
         await sendOTPEmail(email, otp);
 
         user.password = undefined
@@ -63,26 +69,25 @@ const Signup = async (req, res) => {
     }
 };
 
-// ---------------------------------------------------
+
 // Login - POST - "/login"
 const Login = async (req, res) => {
     try {
-        // Extract data from the request body
+
         const { email, password } = req.body;
 
-        // Check if the user exists
         const existingUser = await User.findOne({ email });
         if (!existingUser) {
             return sendResponse(res, 400, null, USER_NOT_FOUND_WITH_THIS_EMAIL, true);
         }
 
-        // Verify the password
+
         const isPasswordValid = await bcrypt.compare(password, existingUser.password);
         if (!isPasswordValid) {
             return sendResponse(res, 400, null, PASSWORD_IS_WRONG, true);
         }
 
-        // Generate a token
+
         const token = createSecretToken(existingUser._id);
 
         res.cookie("authToken", token, {
@@ -93,16 +98,16 @@ const Login = async (req, res) => {
         });
 
         const otp = generateOTP(GENERATE_OTP);
-        // OTP expires in 60 seconds
+
         const expiresAt = new Date(Date.now() + 60 * 1000);
 
-        // Store OTP in the database
+
         await OTP.create({ email, otp, expiresAt });
 
-        // Send OTP email
+
         await sendOTPEmail(email, otp);
 
-        // Send a success response
+
         sendResponse(res, 200, existingUser, LOGIN_SUCCESSFUL, false);
     } catch (error) {
         sendResponse(res, 500, null, INTERNAL_SERVER_ERROR, true, error);
@@ -122,39 +127,37 @@ const Logout = (req, res) => {
 const verifyOTP = async (req, res) => {
     const { email, otp } = req.body;
 
-    // Ensure user is authenticated by checking the decoded token
+
     if (!req.user || req.user.email !== email) {
-        return sendResponse(res, 403, null, "Unauthorized", true);
+        return sendResponse(res, 403, null, UNAUTHORIZED_USER, true);
     }
 
-    // Check if OTP exists and has not expired
+
     const otpRecord = await OTP.findOne({ email, otp });
 
     if (!otpRecord) {
-        return sendResponse(res, 400, null, "Invalid OTP", true);
+        return sendResponse(res, 400, null, INVALID_OTP, true);
     }
 
     if (new Date() > otpRecord.expiresAt) {
-        return sendResponse(res, 400, null, "OTP Expired", true);
+        return sendResponse(res, 400, null, OTP_EXPIRE, true);
     }
 
-    // OTP is valid, proceed with user verification
     try {
-        // Find the user by email and update the isVerified field
         const user = await User.findOneAndUpdate(
             { email },
             { isVerified: true },
-            { new: true } // This ensures the updated document is returned
+            { new: true }
         );
 
         if (!user) {
-            return sendResponse(res, 404, null, "User not found", true);
+            return sendResponse(res, 404, null, USER_NOT_FOUND_WITH_THIS_EMAIL, true);
         }
 
-        sendResponse(res, 200, null, "OTP Verified and User Verified", false);
+        sendResponse(res, 200, null, OTP_AND_USER_VERIFIED, false);
     } catch (error) {
         console.error(error);
-        sendResponse(res, 500, null, "Internal Server Error", true);
+        sendResponse(res, 500, null, INTERNAL_SERVER_ERROR, true);
     }
 };
 
@@ -167,42 +170,38 @@ const resendOTP = async (req, res) => {
 
     const existingOtp = await OTP.find({ email });
     if (existingOtp) {
-        await OTP.deleteOne({ email });  // Remove old OTP
+        await OTP.deleteOne({ email });
     }
 
     const otp = generateOTP(GENERATE_OTP);
-    const expiresAt = new Date(Date.now() + 60 * 1000);  // 60 seconds expiration
+    const expiresAt = new Date(Date.now() + 60 * 1000);
 
     await OTP.create({ email, otp, expiresAt });
 
     await sendOTPEmail(email, otp);
 
-    sendResponse(res, 200, null, "New OTP Sent", false);
+    sendResponse(res, 200, null, NEW_OTP_SENT, false);
 };
 
 // Forgot Password
 const ForgotPassword = async (req, res) => {
     const { email } = req.body;
 
-    // Check if the user exists
     const user = await User.findOne({ email });
     if (!user) {
-        return sendResponse(res, 400, null, "User not found with this email", true);
+        return sendResponse(res, 400, null, USER_NOT_FOUND_WITH_THIS_EMAIL, true);
     }
 
-    // Generate a password reset token (JWT) that expires in 1 hour
     const resetToken = jwt.sign({ id: user._id, email: email }, process.env.JWT_SECRET, {
-        expiresIn: "1h",  // Set 1 hour expiration
+        expiresIn: "1h",
     });
 
-    // Generate the reset password link
     const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
 
-    // Send the reset password link email
     const resetMessage = `Click here to reset your password: ${resetLink}`;
-    await sendEmailResetPass(email, resetMessage);  // Reuse sendOTPEmail to send the reset link
+    await sendEmailResetPass(email, resetMessage);
 
-    sendResponse(res, 200, null, "Password reset link sent to email", false);
+    sendResponse(res, 200, null, RESET_PASSWORD_LINK_SENT, false);
 };
 
 
@@ -211,26 +210,23 @@ const ResetPassword = async (req, res) => {
     const { token, newPassword } = req.body;
 
     try {
-        // Decode and verify the token (check if it’s expired)
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         console.log("decoded", decoded)
 
-        // Find the user by the decoded ID (ensure the token is valid)
         const user = await User.findOne({ _id: decoded.id });
         if (!user) {
-            return sendResponse(res, 400, null, "User not found", true);
+            return sendResponse(res, 400, null, USER_NOT_FOUND_WITH_THIS_EMAIL, true);
         }
 
-        // Update the user's password
         user.password = await bcrypt.hash(newPassword, 10);
         user.confirmPassword = await bcrypt.hash(newPassword, 10);
         await user.save();
 
-        sendResponse(res, 200, null, "Password successfully updated", false);
+        sendResponse(res, 200, null, PASSWORD_UPDATED_SUCCESSFULLY, false);
 
     } catch (error) {
-        sendResponse(res, 400, null, "In Valid Or Expire Token", true);
+        sendResponse(res, 400, null, INVALID_OR_EXPIRE_TOKEN, true);
     }
 };
 
