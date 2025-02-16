@@ -11,15 +11,17 @@ const {
 
 const verifyToken = async (req, res, next) => {
     try {
-        let token = req.cookies.authToken || req.headers["authorization"]?.split(" ")[1];
+        let token =
+            req.cookies.authToken ||
+            req.headers["authorization"]?.split(" ")[1];
 
         if (!token) {
             return sendResponse(res, 401, null, ACCESS_DENIED_TOKEN, true);
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
         const user = await User.findById(decoded.id);
+
         if (!user) {
             return sendResponse(res, 401, null, ACCESS_DENIED_USER, true);
         }
@@ -30,6 +32,5 @@ const verifyToken = async (req, res, next) => {
         return sendResponse(res, 403, null, INVALID_EXPIRE_TOKEN, true);
     }
 };
-
 
 module.exports = verifyToken;

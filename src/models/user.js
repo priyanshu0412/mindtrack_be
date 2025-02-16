@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
-const userSchema = mongoose.Schema(
+const userSchema = new mongoose.Schema(
     {
         userName: {
             type: String,
@@ -16,14 +16,10 @@ const userSchema = mongoose.Schema(
             type: String,
             required: true,
         },
-        confirmPassword: {
-            type: String,
-            required: true,
-        },
         isVerified: {
             type: Boolean,
-            default: false
-        }
+            default: false,
+        },
     },
     { timestamps: true }
 );
@@ -33,7 +29,6 @@ userSchema.pre("save", async function (next) {
         try {
             const salt = await bcrypt.genSalt(10);
             this.password = await bcrypt.hash(this.password, salt);
-            this.confirmPassword = undefined;
         } catch (err) {
             return next(err);
         }
