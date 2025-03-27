@@ -6,9 +6,9 @@ require("dotenv").config();
 
 const DBConnection = require("./db");
 const authRouter = require("./routes/authRoute");
-// const dashboardRouter = require("./routes/dashboardRoute");
 const verifyToken = require("./middleware/verifyToken");
 const todoRouter = require("./routes/todoRoute");
+const diaryRoute = require("./routes/diaryRoute");
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -37,6 +37,7 @@ DBConnection()
 // Routes
 app.use("/auth", authRouter);
 app.use("/api/todo", verifyToken, todoRouter);
+app.use("/api/diary", verifyToken, diaryRoute);
 
 // -----------------------------------------------
 // Server Initialization

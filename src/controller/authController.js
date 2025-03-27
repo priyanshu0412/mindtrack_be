@@ -54,7 +54,7 @@ const Signup = async (req, res) => {
         await sendOTPEmail(email, otp);
 
         user.password = undefined;
-        sendResponse(res, 201, user, USER_SIGNUP_SUCCESSFULLY, false);
+        sendResponse(res, 201, { user, token }, USER_SIGNUP_SUCCESSFULLY, false);
     } catch (error) {
         sendResponse(res, 500, null, INTERNAL_SERVER_ERROR, true);
     }
@@ -83,7 +83,7 @@ const Login = async (req, res) => {
             expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         });
 
-        sendResponse(res, 200, existingUser, LOGIN_SUCCESSFUL, false);
+        sendResponse(res, 200, { existingUser, token }, LOGIN_SUCCESSFUL, false);
     } catch (error) {
         sendResponse(res, 500, null, INTERNAL_SERVER_ERROR, true, error);
     }
