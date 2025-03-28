@@ -17,7 +17,7 @@ const createTodo = async (req, res) => {
         });
 
         await todo.save();
-        res.status(201).json(todo);
+        res.status(200).json(todo);
     } catch (error) {
         res.status(500).json({ error: error.message || "Internal Server Error" });
     }
@@ -33,22 +33,22 @@ const getTodos = async (req, res) => {
     }
 };
 
-// Get Single To-Do by ID - GET - /api/todo/:id
-const getTodoById = async (req, res) => {
-    try {
-        const todo = await Todo.findById(req.params.id);
-        if (!todo) return res.status(404).json({ error: "To-Do not found" });
+    // Get Single To-Do by ID - GET - /api/todo/:id
+    const getTodoById = async (req, res) => {
+        try {
+            const todo = await Todo.findById(req.params.id);
+            if (!todo) return res.status(404).json({ error: "To-Do not found" });
 
-        // Ensure the user can only access their own To-Dos
-        if (todo.user.toString() !== req.user.id) {
-            return res.status(403).json({ error: "Unauthorized access" });
+            // Ensure the user can only access their own To-Dos
+            if (todo.user.toString() !== req.user.id) {
+                return res.status(403).json({ error: "Unauthorized access" });
+            }
+
+            res.json(todo);
+        } catch (error) {
+            res.status(500).json({ error: error.message || "Internal Server Error" });
         }
-
-        res.json(todo);
-    } catch (error) {
-        res.status(500).json({ error: error.message || "Internal Server Error" });
-    }
-};
+    };
 
 // Update To-Do - PATCH - /api/todo/:id
 const updateTodo = async (req, res) => {
