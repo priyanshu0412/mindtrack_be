@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+const { ERR_SENDING_MAIL } = require("../helpers/constant");
 
 const sendOTPEmail = async (email, otp) => {
     const transporter = nodemailer.createTransport({
@@ -38,7 +39,7 @@ const sendOTPEmail = async (email, otp) => {
     try {
         await transporter.sendMail(mailOptions);
     } catch (error) {
-        console.error("Error sending OTP email:", error);
+        console.error(ERR_SENDING_MAIL, error);
     }
 };
 

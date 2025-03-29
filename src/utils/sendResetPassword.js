@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+const { ERR_SENDING_PASSWORD_REST_MAIL } = require("../helpers/constant");
 
 const sendEmailResetPass = async (email, resetLink) => {
     const transporter = nodemailer.createTransport({
@@ -40,7 +41,7 @@ const sendEmailResetPass = async (email, resetLink) => {
     try {
         await transporter.sendMail(mailOptions);
     } catch (error) {
-        console.error("Error sending password reset email:", error);
+        console.error(ERR_SENDING_PASSWORD_REST_MAIL, error);
     }
 };
 

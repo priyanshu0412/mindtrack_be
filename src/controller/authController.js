@@ -19,7 +19,8 @@ const {
     NEW_OTP_SENT,
     RESET_PASSWORD_LINK_SENT,
     PASSWORD_UPDATED_SUCCESSFULLY,
-    INVALID_OR_EXPIRE_TOKEN
+    INVALID_OR_EXPIRE_TOKEN,
+    EMAIL_IS_REQUIRED
 } = require("../helpers/constant");
 
 const sendOTPEmail = require("../utils/sendingEmail");
@@ -27,7 +28,7 @@ const OTP = require("../models/otp");
 const generateOTP = require("../utils/generateOTP");
 const sendEmailResetPass = require("../utils/sendResetPassword");
 
-// Signup - POST - "/signup"
+// Signup - POST - "/auth/signup"
 const Signup = async (req, res) => {
     try {
         const { email, password, userName } = req.body;
@@ -60,7 +61,7 @@ const Signup = async (req, res) => {
     }
 };
 
-// Login - POST - "/login"
+// Login - POST - "/auth/login"
 const Login = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -89,7 +90,7 @@ const Login = async (req, res) => {
     }
 };
 
-// Verify OTP - POST - "/verify-otp"
+// Verify OTP - POST - "/auth/verify-otp"
 const verifyOTP = async (req, res) => {
     try {
         const { email, otp } = req.body;
@@ -123,10 +124,13 @@ const verifyOTP = async (req, res) => {
     }
 };
 
-// Resend OTP - POST - "/resend-otp"
+// Resend OTP - POST - "/auth/resend-otp"
 const resendOTP = async (req, res) => {
     try {
         const { email } = req.body;
+        if (!email) {
+            return sendResponse(res, 400, null, EMAIL_IS_REQUIRED, true);
+        }
         await OTP.deleteOne({ email });
 
         const otp = generateOTP(GENERATE_OTP);
@@ -141,7 +145,7 @@ const resendOTP = async (req, res) => {
     }
 };
 
-// Forgot Password - POST - "/forgot-password"
+// Forgot Password - POST - "/auth/forgot-password"
 const ForgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
@@ -161,7 +165,7 @@ const ForgotPassword = async (req, res) => {
     }
 };
 
-// Reset Password - POST - "/reset-password"
+// Reset Password - POST - "/auth/reset-password"
 const ResetPassword = async (req, res) => {
     try {
         const { token, newPassword } = req.body;

@@ -9,6 +9,7 @@ const authRouter = require("./routes/authRoute");
 const verifyToken = require("./middleware/verifyToken");
 const todoRouter = require("./routes/todoRoute");
 const diaryRoute = require("./routes/diaryRoute");
+const { DB_CONNECT_ERROR } = require("./helpers/constant");
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -30,7 +31,7 @@ app.use(cookieParser());
 // Database Connection
 DBConnection()
     .catch((error) => {
-        console.error("Error connecting to the database:", error);
+        console.error(DB_CONNECT_ERROR, error);
     });
 
 // -----------------------------------------------
