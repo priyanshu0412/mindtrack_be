@@ -44,7 +44,7 @@ const Signup = async (req, res) => {
         res.cookie("authToken", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production" ? true : false,
-            sameSite: "none",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         });
 
@@ -80,7 +80,7 @@ const Login = async (req, res) => {
         res.cookie("authToken", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production" ? true : false,
-            sameSite: "none",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         });
 
