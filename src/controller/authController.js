@@ -42,9 +42,9 @@ const Signup = async (req, res) => {
         const token = createSecretToken(user._id, user?.email);
 
         res.cookie("authToken", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production" ? true : false,
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            httpOnly: false,
+            secure: false,
+            sameSite: "lax",
             expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         });
 
@@ -78,9 +78,9 @@ const Login = async (req, res) => {
 
         const token = createSecretToken(existingUser._id);
         res.cookie("authToken", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production" ? true : false,
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            httpOnly: false,
+            secure: false,
+            sameSite: "lax",
             expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         });
 
