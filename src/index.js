@@ -43,5 +43,5 @@ app.use("/api/diary", verifyToken, diaryRoute);
 // -----------------------------------------------
 // Server Initialization
 app.listen(PORT, () => {
-    console.log(`Server started on http://localhost:${PORT}`);
+    console.log(`Server is started on http://localhost:${PORT}`);
 });
