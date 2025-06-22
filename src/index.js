@@ -39,6 +39,9 @@ DBConnection()
 app.use("/auth", authRouter);
 app.use("/api/todo", verifyToken, todoRouter);
 app.use("/api/diary", verifyToken, diaryRoute);
+app.get("/", (req, res) => {
+    res.send("get method")
+})
 
 // -----------------------------------------------
 // Server Initialization
