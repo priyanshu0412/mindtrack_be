@@ -12,7 +12,7 @@ const sendOTPEmail = async (email, otp) => {
     });
 
     const mailOptions = {
-        from: process.env.SENDER_EMAIL,
+        from: process.env.EMAIL_SENDER,
         to: email,
         subject: "Your OTP Code",
         html: `

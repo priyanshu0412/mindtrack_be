@@ -12,7 +12,7 @@ const sendEmailResetPass = async (email, resetLink) => {
     });
 
     const mailOptions = {
-        from: process.env.SENDER_EMAIL,
+        from: process.env.EMAIL_SENDER,
         to: email,
         subject: "Reset Password Link",
         html: `
