@@ -41,12 +41,12 @@ const Signup = async (req, res) => {
         const user = await User.create({ email, password, userName });
         const token = createSecretToken(user._id, user?.email);
 
-        res.cookie("authToken", token, {
-            httpOnly: false,
-            secure: false,
-            sameSite: "lax",
-            expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        });
+        // res.cookie("authToken", token, {
+        //     httpOnly: false,
+        //     secure: false,
+        //     sameSite: "lax",
+        //     expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        // });
 
         const otp = generateOTP(GENERATE_OTP);
         const expiresAt = new Date(Date.now() + 60 * 1000);
@@ -77,12 +77,12 @@ const Login = async (req, res) => {
         }
 
         const token = createSecretToken(existingUser._id);
-        res.cookie("authToken", token, {
-            httpOnly: false,
-            secure: false,
-            sameSite: "lax",
-            expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        });
+        // res.cookie("authToken", token, {
+        //     httpOnly: false,
+        //     secure: false,
+        //     sameSite: "lax",
+        //     expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        // });
 
         sendResponse(res, 200, { existingUser, token }, LOGIN_SUCCESSFUL, false);
     } catch (error) {
